@@ -1,5 +1,5 @@
 pub mod binary;
-pub mod disassembler;
+pub mod disassembly;
 pub mod error;
 pub mod formatter;
 pub mod gadgets;

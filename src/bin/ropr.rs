@@ -4,9 +4,7 @@ use core::panic;
 use iced_x86::{FormatterOutput, FormatterTextKind};
 use rayon::prelude::*;
 use regex::Regex;
-use ropr::{
-	binary::Binary, disassembler::Disassembly, formatter::ColourFormatter, gadgets::Gadget,
-};
+use ropr::{binary::Binary, disassembly::Disassembly, formatter::ColourFormatter, gadgets::Gadget};
 use rustc_hash::FxHashMap;
 use std::{
 	error::Error,
