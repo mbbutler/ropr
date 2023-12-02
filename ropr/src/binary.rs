@@ -1,4 +1,5 @@
 use crate::error::{Error, Result};
+use disc_v::rv_isa;
 use goblin::{elf64::program_header::PF_X, pe::section_table::IMAGE_SCN_MEM_EXECUTE, Object};
 use std::{
 	fs::read,
@@ -24,7 +25,9 @@ impl Binary {
 		Ok(Self { path, bytes })
 	}
 
-	pub fn path(&self) -> &Path { &self.path }
+	pub fn path(&self) -> &Path {
+		&self.path
+	}
 
 	pub fn sections(&self, raw: Option<bool>) -> Result<Vec<Section>> {
 		match raw {
@@ -33,16 +36,11 @@ impl Binary {
 				section_vaddr: 0,
 				program_base: 0,
 				bytes: &self.bytes,
-				bitness: Bitness::Bits64,
+				rv_isa: rv_isa::rv64,
 			}]),
 			Some(false) => match Object::parse(&self.bytes)? {
 				Object::Elf(e) => {
-					let bitness = if e.is_64 {
-						Bitness::Bits64
-					}
-					else {
-						Bitness::Bits32
-					};
+					let rv_isa = if e.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
 					let sections = e
 						.program_headers
 						.iter()
@@ -55,19 +53,14 @@ impl Binary {
 								section_vaddr: header.p_vaddr as usize,
 								program_base: 0,
 								bytes: &self.bytes[start_offset..end_offset],
-								bitness,
+								rv_isa,
 							}
 						})
 						.collect::<Vec<_>>();
 					Ok(sections)
 				}
 				Object::PE(p) => {
-					let bitness = if p.is_64 {
-						Bitness::Bits64
-					}
-					else {
-						Bitness::Bits32
-					};
+					let rv_isa = if p.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
 					let sections = p
 						.sections
 						.iter()
@@ -80,7 +73,7 @@ impl Binary {
 								section_vaddr: section.virtual_address as usize,
 								program_base: p.image_base,
 								bytes: &self.bytes[start_offset..end_offset],
-								bitness,
+								rv_isa,
 							}
 						})
 						.collect::<Vec<_>>();
@@ -92,12 +85,7 @@ impl Binary {
 			// Default behaviour - fall back to raw if able
 			None => match Object::parse(&self.bytes)? {
 				Object::Elf(e) => {
-					let bitness = if e.is_64 {
-						Bitness::Bits64
-					}
-					else {
-						Bitness::Bits32
-					};
+					let rv_isa = if e.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
 					let sections = e
 						.program_headers
 						.iter()
@@ -110,19 +98,14 @@ impl Binary {
 								section_vaddr: header.p_vaddr as usize,
 								program_base: 0,
 								bytes: &self.bytes[start_offset..end_offset],
-								bitness,
+								rv_isa,
 							}
 						})
 						.collect::<Vec<_>>();
 					Ok(sections)
 				}
 				Object::PE(p) => {
-					let bitness = if p.is_64 {
-						Bitness::Bits64
-					}
-					else {
-						Bitness::Bits32
-					};
+					let rv_isa = if p.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
 					let sections = p
 						.sections
 						.iter()
@@ -135,7 +118,7 @@ impl Binary {
 								section_vaddr: section.virtual_address as usize,
 								program_base: p.image_base,
 								bytes: &self.bytes[start_offset..end_offset],
-								bitness,
+								rv_isa,
 							}
 						})
 						.collect::<Vec<_>>();
@@ -146,7 +129,7 @@ impl Binary {
 					section_vaddr: 0,
 					program_base: 0,
 					bytes: &self.bytes,
-					bitness: Bitness::Bits32,
+					rv_isa: rv_isa::rv32,
 				}]),
 			},
 		}
@@ -157,18 +140,28 @@ pub struct Section<'b> {
 	file_offset: usize,
 	section_vaddr: usize,
 	program_base: usize,
-	bitness: Bitness,
+	rv_isa: rv_isa,
 	bytes: &'b [u8],
 }
 
 impl Section<'_> {
-	pub fn file_offset(&self) -> usize { self.file_offset }
+	pub fn file_offset(&self) -> usize {
+		self.file_offset
+	}
 
-	pub fn section_vaddr(&self) -> usize { self.section_vaddr }
+	pub fn section_vaddr(&self) -> usize {
+		self.section_vaddr
+	}
 
-	pub fn program_base(&self) -> usize { self.program_base }
+	pub fn program_base(&self) -> usize {
+		self.program_base
+	}
 
-	pub fn bitness(&self) -> Bitness { self.bitness }
+	pub fn rv_isa(&self) -> rv_isa {
+		self.rv_isa
+	}
 
-	pub fn bytes(&self) -> &[u8] { self.bytes }
+	pub fn bytes(&self) -> &[u8] {
+		self.bytes
+	}
 }

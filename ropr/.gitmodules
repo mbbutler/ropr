@@ -1,0 +1,3 @@
+[submodule "disassemblers/disc-v"]
+	path = disassemblers/disc-v
+	url = https://github.com/mbbutler/disc-v.git

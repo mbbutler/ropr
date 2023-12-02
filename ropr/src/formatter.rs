@@ -17,9 +17,13 @@ impl Display for ColourFormatter {
 }
 
 impl ColourFormatter {
-	pub fn new() -> Self { Self::default() }
+	pub fn new() -> Self {
+		Self::default()
+	}
 
-	pub fn clear(&mut self) { self.output.clear() }
+	pub fn clear(&mut self) {
+		self.output.clear()
+	}
 }
 
 impl FormatterOutput for ColourFormatter {

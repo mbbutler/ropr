@@ -1,6 +1,8 @@
 use iced_x86::{Code, FlowControl, Instruction, Mnemonic, OpKind, Register};
 
-fn is_ret(instr: &Instruction) -> bool { matches!(instr.mnemonic(), Mnemonic::Ret) }
+fn is_ret(instr: &Instruction) -> bool {
+	matches!(instr.mnemonic(), Mnemonic::Ret)
+}
 
 fn is_sys(instr: &Instruction) -> bool {
 	match instr.mnemonic() {
@@ -20,8 +22,7 @@ fn is_jop(instr: &Instruction, noisy: bool) -> bool {
 					instr.op0_kind(),
 					OpKind::NearBranch64 | OpKind::NearBranch32 | OpKind::NearBranch16
 				)
-			}
-			else {
+			} else {
 				match instr.op0_kind() {
 					OpKind::Register => true,
 					OpKind::Memory => !matches!(instr.memory_base(), Register::EIP | Register::RIP),
@@ -35,8 +36,7 @@ fn is_jop(instr: &Instruction, noisy: bool) -> bool {
 					instr.op0_kind(),
 					OpKind::NearBranch64 | OpKind::NearBranch32 | OpKind::NearBranch16
 				)
-			}
-			else {
+			} else {
 				match instr.op0_kind() {
 					OpKind::Register => true,
 					OpKind::Memory => !matches!(instr.memory_base(), Register::EIP | Register::RIP),
@@ -48,7 +48,9 @@ fn is_jop(instr: &Instruction, noisy: bool) -> bool {
 	}
 }
 
-fn is_invalid(instr: &Instruction) -> bool { matches!(instr.code(), Code::INVALID) }
+fn is_invalid(instr: &Instruction) -> bool {
+	matches!(instr.code(), Code::INVALID)
+}
 
 pub fn is_gadget_tail(instr: &Instruction, rop: bool, sys: bool, jop: bool, noisy: bool) -> bool {
 	if is_invalid(instr) {
@@ -148,7 +150,9 @@ pub fn is_stack_pivot_head(instr: &Instruction) -> bool {
 	}
 }
 
-pub fn is_stack_pivot_tail(instr: &Instruction) -> bool { is_ret(instr) }
+pub fn is_stack_pivot_tail(instr: &Instruction) -> bool {
+	is_ret(instr)
+}
 
 pub fn is_base_pivot_head(instr: &Instruction) -> bool {
 	let reg0 = instr.op0_register();

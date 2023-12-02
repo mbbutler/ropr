@@ -11,7 +11,9 @@ pub struct Gadget {
 }
 
 impl Gadget {
-	pub fn instructions(&self) -> &[Instruction] { &self.instructions }
+	pub fn instructions(&self) -> &[Instruction] {
+		&self.instructions
+	}
 
 	pub fn is_stack_pivot(&self) -> bool {
 		match self.instructions.as_slice() {
@@ -115,8 +117,7 @@ impl Iterator for GadgetIterator<'_> {
 				// instructions.shrink_to_fit();
 				let unique_id = if self.uniq {
 					0
-				}
-				else {
+				} else {
 					self.section_start + current_start_index
 				};
 				return Some((
@@ -135,8 +136,7 @@ impl Iterator for GadgetIterator<'_> {
 			instructions.push(self.tail_instruction);
 			let unique_id = if self.uniq {
 				0
-			}
-			else {
+			} else {
 				self.section_start + self.start_index
 			};
 			return Some((
