@@ -1,44 +1,35 @@
-use crate::rules::{
-	is_base_pivot_head, is_rop_gadget_head, is_stack_pivot_head, is_stack_pivot_tail,
-};
-use iced_x86::{Formatter, FormatterOutput, FormatterTextKind, Instruction};
+use crate::disassembler::ROPInstruction;
+use iced_x86::{Formatter, FormatterOutput, FormatterTextKind};
 use std::hash::Hash;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub struct Gadget {
-	instructions: Vec<Instruction>,
+pub struct Gadget<T: ROPInstruction> {
+	instructions: Vec<T>,
 	unique_id: usize,
 }
 
-impl Gadget {
-	pub fn instructions(&self) -> &[Instruction] {
+impl<T: ROPInstruction> Gadget<T> {
+	pub fn instructions(&self) -> &[T] {
 		&self.instructions
 	}
 
 	pub fn is_stack_pivot(&self) -> bool {
 		match self.instructions.as_slice() {
 			[] => false,
-			[t] => is_stack_pivot_tail(t),
-			[h @ .., _] => h.iter().any(is_stack_pivot_head),
+			[t] => t.is_stack_pivot_tail(),
+			[h @ .., _] => h.iter().any(ROPInstruction::is_stack_pivot_head),
 		}
 	}
 
 	pub fn is_base_pivot(&self) -> bool {
 		match self.instructions.as_slice() {
 			[] | [_] => false,
-			[h @ .., _] => h.iter().any(is_base_pivot_head),
+			[h @ .., _] => h.iter().any(ROPInstruction::is_base_pivot_head),
 		}
 	}
 
 	pub fn format_instruction(&self, output: &mut impl FormatterOutput) {
-		let mut formatter = iced_x86::IntelFormatter::new();
-		let options = iced_x86::Formatter::options_mut(&mut formatter);
-		options.set_hex_prefix("0x");
-		options.set_hex_suffix("");
-		options.set_space_after_operand_separator(true);
-		options.set_branch_leading_zeroes(false);
-		options.set_uppercase_hex(false);
-		options.set_rip_relative_addresses(true);
+		let mut formatter = T::formatter();
 		// Write instructions
 		let mut instructions = self.instructions.iter().peekable();
 		while let Some(i) = instructions.next() {
@@ -51,10 +42,10 @@ impl Gadget {
 	}
 }
 
-pub struct GadgetIterator<'d> {
+pub struct GadgetIterator<'d, T: ROPInstruction> {
 	section_start: usize,
-	tail_instruction: Instruction,
-	predecessors: &'d [Instruction],
+	tail_instruction: T,
+	predecessors: &'d [T],
 	max_instructions: usize,
 	noisy: bool,
 	uniq: bool,
@@ -62,11 +53,11 @@ pub struct GadgetIterator<'d> {
 	finished: bool,
 }
 
-impl<'d> GadgetIterator<'d> {
+impl<'d, T: ROPInstruction> GadgetIterator<'d, T> {
 	pub fn new(
 		section_start: usize,
-		tail_instruction: Instruction,
-		predecessors: &'d [Instruction],
+		tail_instruction: T,
+		predecessors: &'d [T],
 		max_instructions: usize,
 		noisy: bool,
 		uniq: bool,
@@ -85,8 +76,8 @@ impl<'d> GadgetIterator<'d> {
 	}
 }
 
-impl Iterator for GadgetIterator<'_> {
-	type Item = (Gadget, usize);
+impl<T: ROPInstruction> Iterator for GadgetIterator<'_, T> {
+	type Item = (Gadget<T>, usize);
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let mut instructions = Vec::new();
@@ -97,7 +88,7 @@ impl Iterator for GadgetIterator<'_> {
 			let mut index = 0;
 			while index < len && instructions.len() < self.max_instructions - 1 {
 				let instruction = self.predecessors[index];
-				if !is_rop_gadget_head(&instruction, self.noisy) {
+				if !instruction.is_rop_gadget_head(self.noisy) {
 					// Found a bad
 					self.predecessors = &self.predecessors[1..];
 					self.start_index += 1;

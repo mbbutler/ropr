@@ -351,6 +351,7 @@ dependencies = [
  "disc-v",
  "goblin",
  "iced-x86",
+ "lazy_static",
  "rayon",
  "regex",
  "rustc-hash",

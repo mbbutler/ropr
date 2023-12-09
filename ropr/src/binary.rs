@@ -1,10 +1,19 @@
 use crate::error::{Error, Result};
-use disc_v::rv_isa;
 use goblin::{elf64::program_header::PF_X, pe::section_table::IMAGE_SCN_MEM_EXECUTE, Object};
 use std::{
 	fs::read,
 	path::{Path, PathBuf},
 };
+
+const ELF_X86: u16 = 0x03;
+const ELF_X64: u16 = 0x3e;
+const ELF_RISCV: u16 = 0xf3;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Arch {
+	RiscV,
+	X86,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum Bitness {
@@ -12,21 +21,41 @@ pub enum Bitness {
 	Bits64,
 }
 
-pub struct Binary {
+pub struct Binary<'a> {
 	path: PathBuf,
 	bytes: Vec<u8>,
+	arch: Arch,
+	object: Object<'a>,
 }
 
-impl Binary {
+impl<'a> Binary<'a> {
 	pub fn new(path: impl AsRef<Path>) -> Result<Self> {
 		let path = path.as_ref();
 		let bytes = read(path)?;
 		let path = path.to_path_buf();
-		Ok(Self { path, bytes })
+		let object = Object::parse(&bytes)?;
+		let arch = match object {
+			Object::Elf(e) => match e.header.e_machine {
+				ELF_RISCV => Arch::RiscV,
+				ELF_X86 | ELF_X64 => Arch::X86,
+				_ => Arch::X86,
+			},
+			_ => Arch::X86,
+		};
+		Ok(Self {
+			path,
+			bytes,
+			object,
+			arch,
+		})
 	}
 
 	pub fn path(&self) -> &Path {
 		&self.path
+	}
+
+	pub fn arch(&self) -> &Arch {
+		&self.arch
 	}
 
 	pub fn sections(&self, raw: Option<bool>) -> Result<Vec<Section>> {
@@ -36,11 +65,15 @@ impl Binary {
 				section_vaddr: 0,
 				program_base: 0,
 				bytes: &self.bytes,
-				rv_isa: rv_isa::rv64,
+				bitness: Bitness::Bits64,
 			}]),
-			Some(false) => match Object::parse(&self.bytes)? {
+			Some(false) => match self.object {
 				Object::Elf(e) => {
-					let rv_isa = if e.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
+					let bitness = if e.is_64 {
+						Bitness::Bits64
+					} else {
+						Bitness::Bits32
+					};
 					let sections = e
 						.program_headers
 						.iter()
@@ -53,14 +86,18 @@ impl Binary {
 								section_vaddr: header.p_vaddr as usize,
 								program_base: 0,
 								bytes: &self.bytes[start_offset..end_offset],
-								rv_isa,
+								bitness,
 							}
 						})
 						.collect::<Vec<_>>();
 					Ok(sections)
 				}
 				Object::PE(p) => {
-					let rv_isa = if p.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
+					let bitness = if p.is_64 {
+						Bitness::Bits64
+					} else {
+						Bitness::Bits32
+					};
 					let sections = p
 						.sections
 						.iter()
@@ -73,7 +110,7 @@ impl Binary {
 								section_vaddr: section.virtual_address as usize,
 								program_base: p.image_base,
 								bytes: &self.bytes[start_offset..end_offset],
-								rv_isa,
+								bitness,
 							}
 						})
 						.collect::<Vec<_>>();
@@ -83,9 +120,13 @@ impl Binary {
 				_ => Err(Error::Unsupported),
 			},
 			// Default behaviour - fall back to raw if able
-			None => match Object::parse(&self.bytes)? {
+			None => match self.object {
 				Object::Elf(e) => {
-					let rv_isa = if e.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
+					let bitness = if e.is_64 {
+						Bitness::Bits64
+					} else {
+						Bitness::Bits32
+					};
 					let sections = e
 						.program_headers
 						.iter()
@@ -98,14 +139,18 @@ impl Binary {
 								section_vaddr: header.p_vaddr as usize,
 								program_base: 0,
 								bytes: &self.bytes[start_offset..end_offset],
-								rv_isa,
+								bitness,
 							}
 						})
 						.collect::<Vec<_>>();
 					Ok(sections)
 				}
 				Object::PE(p) => {
-					let rv_isa = if p.is_64 { rv_isa::rv64 } else { rv_isa::rv32 };
+					let bitness = if p.is_64 {
+						Bitness::Bits64
+					} else {
+						Bitness::Bits32
+					};
 					let sections = p
 						.sections
 						.iter()
@@ -118,7 +163,7 @@ impl Binary {
 								section_vaddr: section.virtual_address as usize,
 								program_base: p.image_base,
 								bytes: &self.bytes[start_offset..end_offset],
-								rv_isa,
+								bitness,
 							}
 						})
 						.collect::<Vec<_>>();
@@ -129,7 +174,7 @@ impl Binary {
 					section_vaddr: 0,
 					program_base: 0,
 					bytes: &self.bytes,
-					rv_isa: rv_isa::rv32,
+					bitness: Bitness::Bits32,
 				}]),
 			},
 		}
@@ -140,7 +185,7 @@ pub struct Section<'b> {
 	file_offset: usize,
 	section_vaddr: usize,
 	program_base: usize,
-	rv_isa: rv_isa,
+	bitness: Bitness,
 	bytes: &'b [u8],
 }
 
@@ -157,8 +202,8 @@ impl Section<'_> {
 		self.program_base
 	}
 
-	pub fn rv_isa(&self) -> rv_isa {
-		self.rv_isa
+	pub fn bitness(&self) -> Bitness {
+		self.bitness
 	}
 
 	pub fn bytes(&self) -> &[u8] {

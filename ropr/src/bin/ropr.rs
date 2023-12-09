@@ -5,7 +5,10 @@ use iced_x86::{FormatterOutput, FormatterTextKind};
 use rayon::prelude::*;
 use regex::Regex;
 use ropr::{
-	binary::Binary, disassembler::Disassembly, formatter::ColourFormatter, gadgets::Gadget,
+	binary::{Arch, Binary},
+	disassembler::Disassembly,
+	formatter::ColourFormatter,
+	gadgets::Gadget,
 };
 use rustc_hash::FxHashMap;
 use std::{
@@ -95,6 +98,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let b = opts.binary;
 	let b = Binary::new(b)?;
 	let sections = b.sections(opts.raw)?;
+	let disassemble = match b.arch() {
+		Arch::RiscV => RVDisassembler::new,
+		Arch::X86 => X86Disassembler::new,
+	};
 
 	let noisy = opts.noisy;
 	let colour = opts.colour;
