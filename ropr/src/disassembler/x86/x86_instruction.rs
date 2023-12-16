@@ -1,10 +1,20 @@
-use crate::disassembler::{ROPFormatter, ROPInstruction};
-use iced_x86::{Code, FlowControl, Instruction, IntelFormatter, Mnemonic, OpKind, Register};
+use std::marker::PhantomData;
+
+use crate::disassembler::{ROPFormat, ROPFormatter, ROPInstruction};
+use iced_x86::{
+	Code, FlowControl, Formatter, Instruction, IntelFormatter, Mnemonic, OpKind, Register,
+};
+
+impl ROPFormat<Instruction> for IntelFormatter {
+	fn format_instr(&mut self, instr: &Instruction, output: &mut impl iced_x86::FormatterOutput) {
+		self.format(instr, output);
+	}
+}
 
 impl ROPInstruction for Instruction {
-	type Format = Instruction;
+	type Formatter = IntelFormatter;
 
-	fn formatter() -> Self::Formatter {
+	fn formatter() -> ROPFormatter<Self, Self::Formatter> {
 		let mut formatter = IntelFormatter::new();
 		let options = iced_x86::Formatter::options_mut(&mut formatter);
 		options.set_hex_prefix("0x");
@@ -13,7 +23,10 @@ impl ROPInstruction for Instruction {
 		options.set_branch_leading_zeroes(false);
 		options.set_uppercase_hex(false);
 		options.set_rip_relative_addresses(true);
-		formatter
+		ROPFormatter {
+			formatter,
+			t: PhantomData::<Instruction>,
+		}
 	}
 
 	fn len(&self) -> usize {
@@ -236,7 +249,17 @@ impl ROPInstruction for Instruction {
 	}
 
 	// fn format(&self, output: &mut impl iced_x86::FormatterOutput) {
+	// 	let formatter = FORMATTER.get_or_init(|| {
+	// 		let mut formatter = IntelFormatter::new();
+	// 		let options = iced_x86::Formatter::options_mut(&mut formatter);
+	// 		options.set_hex_prefix("0x");
+	// 		options.set_hex_suffix("");
+	// 		options.set_space_after_operand_separator(true);
+	// 		options.set_branch_leading_zeroes(false);
+	// 		options.set_uppercase_hex(false);
+	// 		options.set_rip_relative_addresses(true);
+	// 		formatter
+	// 	});
 	// 	formatter.format(&self, output);
-	// 	output.write(";", FormatterTextKind::Text);
 	// }
 }

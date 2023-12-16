@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use regex::Regex;
 use ropr::{
 	binary::{Arch, Binary},
-	disassembler::Disassembly,
+	disassembler::{riscv::RVDisassembler, x86::X86Disassembler, Disassembly, ROPInstruction},
 	formatter::ColourFormatter,
 	gadgets::Gadget,
 };
@@ -77,7 +77,7 @@ struct Opt {
 	binary: PathBuf,
 }
 
-fn write_gadgets(mut w: impl Write, gadgets: &[(Gadget, usize)]) {
+fn write_gadgets<T: ROPInstruction>(mut w: impl Write, gadgets: &[(Gadget<T>, usize)]) {
 	let mut output = ColourFormatter::new();
 	for (gadget, address) in gadgets {
 		output.clear();
@@ -98,10 +98,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let b = opts.binary;
 	let b = Binary::new(b)?;
 	let sections = b.sections(opts.raw)?;
-	let disassemble = match b.arch() {
-		Arch::RiscV => RVDisassembler::new,
-		Arch::X86 => X86Disassembler::new,
-	};
+	// let disassemble = match b.arch() {
+	// 	Arch::RiscV => RVDisassembler::disassemble,
+	// 	Arch::X86 => X86Disassembler::disassemble,
+	// };
 
 	let noisy = opts.noisy;
 	let colour = opts.colour;
@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let gadget_to_addr = sections
 		.iter()
-		.filter_map(Disassembly::new)
+		.filter_map(RVDisassembler::disassemble)
 		.flat_map(|dis| {
 			(0..dis.bytes().len())
 				.into_par_iter()

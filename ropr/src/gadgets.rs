@@ -1,5 +1,5 @@
 use crate::disassembler::ROPInstruction;
-use iced_x86::{Formatter, FormatterOutput, FormatterTextKind};
+use iced_x86::{FormatterOutput, FormatterTextKind};
 use std::hash::Hash;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -87,15 +87,15 @@ impl<T: ROPInstruction> Iterator for GadgetIterator<'_, T> {
 			let len = self.predecessors.len();
 			let mut index = 0;
 			while index < len && instructions.len() < self.max_instructions - 1 {
-				let instruction = self.predecessors[index];
+				let instruction = self.predecessors[index].clone();
 				if !instruction.is_rop_gadget_head(self.noisy) {
 					// Found a bad
 					self.predecessors = &self.predecessors[1..];
 					self.start_index += 1;
 					continue 'outer;
 				}
-				instructions.push(instruction);
 				index += instruction.len();
+				instructions.push(instruction);
 			}
 
 			let current_start_index = self.start_index;
@@ -104,7 +104,7 @@ impl<T: ROPInstruction> Iterator for GadgetIterator<'_, T> {
 			self.start_index += 1;
 
 			if index == len {
-				instructions.push(self.tail_instruction);
+				instructions.push(self.tail_instruction.clone());
 				// instructions.shrink_to_fit();
 				let unique_id = if self.uniq {
 					0
@@ -124,7 +124,7 @@ impl<T: ROPInstruction> Iterator for GadgetIterator<'_, T> {
 		if !self.finished {
 			self.finished = true;
 			instructions.clear();
-			instructions.push(self.tail_instruction);
+			instructions.push(self.tail_instruction.clone());
 			let unique_id = if self.uniq {
 				0
 			} else {

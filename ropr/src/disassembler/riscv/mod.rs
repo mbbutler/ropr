@@ -5,9 +5,7 @@ use disc_v::{rv_isa, Disassembler as DVDisassembler};
 use self::rv_instruction::RVInstruction;
 
 use super::Disassembly;
-mod rv_instruction;
-
-const MAX_INSTRUCTION_LENGTH: usize = 15;
+pub mod rv_instruction;
 
 pub struct RVDisassembler {}
 

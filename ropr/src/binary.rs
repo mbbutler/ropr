@@ -21,14 +21,13 @@ pub enum Bitness {
 	Bits64,
 }
 
-pub struct Binary<'a> {
+pub struct Binary {
 	path: PathBuf,
 	bytes: Vec<u8>,
 	arch: Arch,
-	object: Object<'a>,
 }
 
-impl<'a> Binary<'a> {
+impl Binary {
 	pub fn new(path: impl AsRef<Path>) -> Result<Self> {
 		let path = path.as_ref();
 		let bytes = read(path)?;
@@ -42,12 +41,7 @@ impl<'a> Binary<'a> {
 			},
 			_ => Arch::X86,
 		};
-		Ok(Self {
-			path,
-			bytes,
-			object,
-			arch,
-		})
+		Ok(Self { path, bytes, arch })
 	}
 
 	pub fn path(&self) -> &Path {
@@ -67,7 +61,7 @@ impl<'a> Binary<'a> {
 				bytes: &self.bytes,
 				bitness: Bitness::Bits64,
 			}]),
-			Some(false) => match self.object {
+			Some(false) => match Object::parse(&self.bytes)? {
 				Object::Elf(e) => {
 					let bitness = if e.is_64 {
 						Bitness::Bits64
@@ -120,7 +114,7 @@ impl<'a> Binary<'a> {
 				_ => Err(Error::Unsupported),
 			},
 			// Default behaviour - fall back to raw if able
-			None => match self.object {
+			None => match Object::parse(&self.bytes)? {
 				Object::Elf(e) => {
 					let bitness = if e.is_64 {
 						Bitness::Bits64

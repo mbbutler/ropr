@@ -1,8 +1,22 @@
-use disc_v::{rv_decode, rv_ireg, rv_op};
-use iced_x86::{FlowControl, FormatterOutput};
+use std::{
+	hash::{Hash, Hasher},
+	marker::PhantomData,
+};
 
-use crate::disassembler::{ROPFormatter, ROPInstruction};
+use disc_v::{format_inst, rv_decode, rv_ireg, rv_op};
+use iced_x86::{FlowControl, FormatterTextKind};
 
+use crate::disassembler::{ROPFormat, ROPFormatter, ROPInstruction};
+
+pub struct RVFormatter {}
+
+impl ROPFormat<RVInstruction> for RVFormatter {
+	fn format_instr(&mut self, instr: &RVInstruction, output: &mut impl iced_x86::FormatterOutput) {
+		output.write(&format_inst(40, &instr.instr), FormatterTextKind::Text);
+	}
+}
+
+#[derive(Clone)]
 pub struct RVInstruction {
 	instr: rv_decode,
 }
@@ -14,7 +28,7 @@ impl RVInstruction {
 
 	fn modifies_reg(&self, target_reg: u8) -> bool {
 		match self.instr.rd {
-			target_reg => match self.instr.op {
+			reg if reg == target_reg => match self.instr.op {
 				rv_op::mv
 				| rv_op::c_mv
 				| rv_op::add
@@ -87,17 +101,29 @@ impl RVInstruction {
 	}
 }
 
-pub struct RVFormatter {}
+impl Eq for RVInstruction {}
 
-impl ROPFormatter<T> for RVFormatter {
-	fn format(&self, instr: &RVInstruction, output: &mut impl FormatterOutput) {}
+impl PartialEq for RVInstruction {
+	fn eq(&self, other: &Self) -> bool {
+		self.instr.inst == other.instr.inst
+	}
+}
+
+impl Hash for RVInstruction {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		self.instr.inst.hash(state);
+	}
 }
 
 impl ROPInstruction for RVInstruction {
-	type Format = RVInstruction;
+	type Formatter = RVFormatter;
 
-	fn formatter() -> dyn ROPFormatter<Self::Format> {
-		RVFormatter {}
+	fn formatter() -> ROPFormatter<Self, Self::Formatter> {
+		let formatter = RVFormatter {};
+		ROPFormatter {
+			formatter,
+			t: PhantomData::<RVInstruction>,
+		}
 	}
 
 	fn len(&self) -> usize {
@@ -165,4 +191,8 @@ impl ROPInstruction for RVInstruction {
 	fn is_base_pivot_head(&self) -> bool {
 		self.modifies_reg(rv_ireg::s0 as u8)
 	}
+
+	// fn format(&self, output: &mut impl iced_x86::FormatterOutput) {
+	// 	output.write(&format_inst(40, &self.instr), FormatterTextKind::Text);
+	// }
 }

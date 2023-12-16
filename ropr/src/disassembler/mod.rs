@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use iced_x86::FormatterOutput;
 
 use crate::{binary::Section, gadgets::GadgetIterator};
@@ -42,7 +44,7 @@ impl<'b, T: ROPInstruction> Disassembly<'b, T> {
 		let start_index =
 			tail_index.saturating_sub((max_instructions - 1) * MAX_INSTRUCTION_LENGTH);
 		let predecessors = &self.instructions[start_index..tail_index];
-		let tail_instruction = self.instructions[tail_index];
+		let tail_instruction = self.instructions[tail_index].clone();
 		GadgetIterator::new(
 			self.section.program_base() + self.section.section_vaddr(),
 			tail_instruction,
@@ -55,12 +57,8 @@ impl<'b, T: ROPInstruction> Disassembly<'b, T> {
 	}
 }
 
-pub trait ROPFormatter<T: ROPInstruction> {
-	fn format(instr: &T, output: &mut impl FormatterOutput);
-}
-
-pub trait ROPInstruction {
-	type Format;
+pub trait ROPInstruction: Sized + Clone + Eq {
+	type Formatter: ROPFormat<Self>;
 
 	fn len(&self) -> usize;
 
@@ -82,5 +80,20 @@ pub trait ROPInstruction {
 
 	fn is_base_pivot_head(&self) -> bool;
 
-	fn formatter() -> dyn ROPFormatter<Self::Format>;
+	fn formatter() -> ROPFormatter<Self, Self::Formatter>;
+}
+
+pub trait ROPFormat<T: ROPInstruction> {
+	fn format_instr(&mut self, instr: &T, output: &mut impl FormatterOutput);
+}
+
+pub struct ROPFormatter<T: ROPInstruction, U: ROPFormat<T>> {
+	formatter: U,
+	t: PhantomData<T>,
+}
+
+impl<T: ROPInstruction, U: ROPFormat<T>> ROPFormatter<T, U> {
+	pub fn format(&mut self, instr: &T, output: &mut impl FormatterOutput) {
+		self.formatter.format_instr(instr, output)
+	}
 }
