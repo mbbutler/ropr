@@ -5,12 +5,8 @@ use iced_x86::{FormatterOutput, FormatterTextKind};
 use rayon::prelude::*;
 use regex::Regex;
 use ropr::{
-	binary::{Arch, Binary},
-	disassembler::{
-		riscv::{rv_instruction::RVInstruction, RVDisassembler},
-		x86::X86Disassembler,
-		Disassembly, ROPInstruction,
-	},
+	binary::Binary,
+	disassembler::{riscv::RVDisassembler, ROPInstruction},
 	formatter::ColourFormatter,
 	gadgets::Gadget,
 };

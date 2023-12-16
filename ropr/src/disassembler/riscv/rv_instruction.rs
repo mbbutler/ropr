@@ -5,7 +5,7 @@ use std::{
 };
 
 use disc_v::{
-	format::format_component, format_inst, opcode_data::opcode_data, rv_decode, rv_ireg, rv_op,
+	format::format_component, opcode_data::opcode_data, rv_codec, rv_decode, rv_ireg, rv_op,
 	rv_options,
 };
 use iced_x86::{FlowControl, FormatterTextKind};
@@ -35,7 +35,31 @@ impl ROPFormat<RVInstruction> for RVFormatter {
 
 #[derive(Clone)]
 pub struct RVInstruction {
-	instr: rv_decode,
+	pub instr: rv_decode,
+}
+
+impl Default for RVInstruction {
+	fn default() -> Self {
+		Self {
+			instr: rv_decode {
+				pc: 0,
+				inst: 0,
+				len: 0,
+				imm: 0,
+				op: rv_op::illegal,
+				codec: rv_codec::illegal,
+				rd: 0,
+				rs1: 0,
+				rs2: 0,
+				rs3: 0,
+				rm: 0,
+				pred: 0,
+				succ: 0,
+				aq: false,
+				rl: false,
+			},
+		}
+	}
 }
 
 impl RVInstruction {
@@ -149,7 +173,11 @@ impl Hash for RVInstruction {
 
 impl Display for RVInstruction {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", &format_inst(40, &self.instr))
+		let options = rv_options {
+			reg_nicknames: true,
+			resolve_offsets: false,
+		};
+		write!(f, "{}", &self.format(&options))
 	}
 }
 

@@ -538,6 +538,28 @@ pub struct rv_decode {
     pub rl: bool,
 }
 
+impl Default for rv_decode {
+    fn default() -> Self {
+        Self {
+            pc: 0,
+            inst: 0,
+            len: 2,
+            imm: 0,
+            op: rv_op::illegal,
+            codec: rv_codec::illegal,
+            rd: 0,
+            rs1: 0,
+            rs2: 0,
+            rs3: 0,
+            rm: 0,
+            pred: 0,
+            succ: 0,
+            aq: false,
+            rl: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 #[allow(non_camel_case_types)]
 pub struct rv_options {

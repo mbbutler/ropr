@@ -2,7 +2,7 @@ use types::*;
 
 /* instruction formats */
 
-const rv_fmt_none: &str = "O\t";
+const rv_fmt_none: &str = "O";
 const rv_fmt_rs1: &str = "O\t1";
 const rv_fmt_offset: &str = "O\to";
 const rv_fmt_offset_rs1: &str = "O\ti(1)";
