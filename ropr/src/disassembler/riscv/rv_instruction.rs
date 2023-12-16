@@ -1,18 +1,35 @@
 use std::{
+	fmt::Display,
 	hash::{Hash, Hasher},
 	marker::PhantomData,
 };
 
-use disc_v::{format_inst, rv_decode, rv_ireg, rv_op};
+use disc_v::{
+	format::format_component, format_inst, opcode_data::opcode_data, rv_decode, rv_ireg, rv_op,
+	rv_options,
+};
 use iced_x86::{FlowControl, FormatterTextKind};
 
 use crate::disassembler::{ROPFormat, ROPFormatter, ROPInstruction};
 
-pub struct RVFormatter {}
+pub struct RVFormatter {
+	options: rv_options,
+}
+
+impl RVFormatter {
+	fn new() -> Self {
+		Self {
+			options: rv_options {
+				reg_nicknames: true,
+				resolve_offsets: false,
+			},
+		}
+	}
+}
 
 impl ROPFormat<RVInstruction> for RVFormatter {
 	fn format_instr(&mut self, instr: &RVInstruction, output: &mut impl iced_x86::FormatterOutput) {
-		output.write(&format_inst(40, &instr.instr), FormatterTextKind::Text);
+		output.write(&instr.format(&self.options), FormatterTextKind::Text);
 	}
 }
 
@@ -24,6 +41,21 @@ pub struct RVInstruction {
 impl RVInstruction {
 	pub fn new(instr: rv_decode) -> Self {
 		Self { instr }
+	}
+
+	fn format(&self, options: &rv_options) -> String {
+		let mut buf = String::new();
+		for ch in opcode_data[self.instr.op as usize].format.chars() {
+			match ch {
+				'\t' => {
+					buf.push(' ');
+				}
+				_ => {
+					format_component(&mut buf, ch, &self.instr, options);
+				}
+			}
+		}
+		buf
 	}
 
 	fn modifies_reg(&self, target_reg: u8) -> bool {
@@ -115,11 +147,17 @@ impl Hash for RVInstruction {
 	}
 }
 
+impl Display for RVInstruction {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", &format_inst(40, &self.instr))
+	}
+}
+
 impl ROPInstruction for RVInstruction {
 	type Formatter = RVFormatter;
 
 	fn formatter() -> ROPFormatter<Self, Self::Formatter> {
-		let formatter = RVFormatter {};
+		let formatter = RVFormatter::new();
 		ROPFormatter {
 			formatter,
 			t: PhantomData::<RVInstruction>,

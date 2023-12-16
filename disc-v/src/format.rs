@@ -294,7 +294,7 @@ pub fn extract_inst(dec: &rv_decode, options: &rv_options) -> (String, Option<St
     (op, if args == "" { None } else { Some(args) })
 }
 
-fn format_component(buf: &mut String, ch: char, dec: &rv_decode, options: &rv_options) {
+pub fn format_component(buf: &mut String, ch: char, dec: &rv_decode, options: &rv_options) {
     match ch {
         'O' => {
             buf.push_str(opcode_data[dec.op as usize].name);

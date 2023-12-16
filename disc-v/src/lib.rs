@@ -10,9 +10,9 @@
 //#![warn(missing_docs)]
 
 mod disasm;
-mod format;
+pub mod format;
 mod iterator;
-mod opcode_data;
+pub mod opcode_data;
 mod types;
 
 pub use disasm::{decode_inst, decode_inst_bytes, inst_length, inst_length_first_byte};

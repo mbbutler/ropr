@@ -21,6 +21,10 @@ impl<'b, T: ROPInstruction> Disassembly<'b, T> {
 		self.bytes
 	}
 
+	pub fn len(&self) -> usize {
+		self.instructions.len()
+	}
+
 	pub fn file_offset(&self) -> usize {
 		self.file_offset
 	}

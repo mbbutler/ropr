@@ -27,7 +27,10 @@ impl<'a> Iterator for Disassembler<'a> {
         let inst = self.slice.get(self.ptr..)?;
         let decoded = decode_inst_bytes(self.isa, self.pc, inst);
         if let Some(dec) = &decoded {
-            let len = dec.len;
+            let len = match dec.len {
+                0 => 2,
+                _ => dec.len,
+            };
             self.ptr += len;
             self.pc += len as u64;
         }

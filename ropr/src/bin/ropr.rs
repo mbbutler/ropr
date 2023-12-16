@@ -6,7 +6,11 @@ use rayon::prelude::*;
 use regex::Regex;
 use ropr::{
 	binary::{Arch, Binary},
-	disassembler::{riscv::RVDisassembler, x86::X86Disassembler, Disassembly, ROPInstruction},
+	disassembler::{
+		riscv::{rv_instruction::RVInstruction, RVDisassembler},
+		x86::X86Disassembler,
+		Disassembly, ROPInstruction,
+	},
 	formatter::ColourFormatter,
 	gadgets::Gadget,
 };
@@ -82,7 +86,7 @@ fn write_gadgets<T: ROPInstruction>(mut w: impl Write, gadgets: &[(Gadget<T>, us
 	for (gadget, address) in gadgets {
 		output.clear();
 		output.write(&format!("{:#010x}: ", address), FormatterTextKind::Function);
-		gadget.format_instruction(&mut output);
+		gadget.format(&mut output);
 		match writeln!(w, "{}", output) {
 			Ok(_) => (),
 			Err(_) => return, // Pipe closed - finished writing gadgets
@@ -91,13 +95,22 @@ fn write_gadgets<T: ROPInstruction>(mut w: impl Write, gadgets: &[(Gadget<T>, us
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+	println!("");
 	let start = Instant::now();
 
 	let opts = Opt::parse();
 
 	let b = opts.binary;
 	let b = Binary::new(b)?;
+	println!("{}", &b);
+	println!("");
 	let sections = b.sections(opts.raw)?;
+	println!("");
+	for (i, s) in sections.iter().enumerate() {
+		println!("Section {}:", i + 1);
+		println!("{}", s);
+	}
+
 	// let disassemble = match b.arch() {
 	// 	Arch::RiscV => RVDisassembler::disassemble,
 	// 	Arch::X86 => X86Disassembler::disassemble,
@@ -150,7 +163,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		.iter()
 		.filter_map(RVDisassembler::disassemble)
 		.flat_map(|dis| {
-			(0..dis.bytes().len())
+			(0..dis.len())
 				.into_par_iter()
 				.filter(|offset| dis.is_tail_at(*offset, rop, sys, jop, noisy))
 				.flat_map_iter(|tail| {
@@ -172,7 +185,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 		.into_iter()
 		.filter(|(g, _)| {
 			let mut formatted = String::new();
-			g.format_instruction(&mut formatted);
+			g.format(&mut formatted);
 			regices.iter().all(|r| r.is_match(&formatted))
 				&& !regices_inverse.iter().any(|r| r.is_match(&formatted))
 		})

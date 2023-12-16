@@ -28,12 +28,12 @@ impl<T: ROPInstruction> Gadget<T> {
 		}
 	}
 
-	pub fn format_instruction(&self, output: &mut impl FormatterOutput) {
+	pub fn format(&self, output: &mut impl FormatterOutput) {
 		let mut formatter = T::formatter();
 		// Write instructions
 		let mut instructions = self.instructions.iter().peekable();
-		while let Some(i) = instructions.next() {
-			formatter.format(i, output);
+		while let Some(instr) = instructions.next() {
+			formatter.format(instr, output);
 			output.write(";", FormatterTextKind::Text);
 			if instructions.peek().is_some() {
 				output.write(" ", FormatterTextKind::Text);

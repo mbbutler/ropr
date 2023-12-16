@@ -1,6 +1,7 @@
 use crate::error::{Error, Result};
 use goblin::{elf64::program_header::PF_X, pe::section_table::IMAGE_SCN_MEM_EXECUTE, Object};
 use std::{
+	fmt::Display,
 	fs::read,
 	path::{Path, PathBuf},
 };
@@ -53,6 +54,7 @@ impl Binary {
 	}
 
 	pub fn sections(&self, raw: Option<bool>) -> Result<Vec<Section>> {
+		println!("Parsing sections...");
 		match raw {
 			Some(true) => Ok(vec![Section {
 				file_offset: 0,
@@ -116,11 +118,13 @@ impl Binary {
 			// Default behaviour - fall back to raw if able
 			None => match Object::parse(&self.bytes)? {
 				Object::Elf(e) => {
+					println!("Image is an ELF");
 					let bitness = if e.is_64 {
 						Bitness::Bits64
 					} else {
 						Bitness::Bits32
 					};
+					println!("Bitness = {:?}", bitness);
 					let sections = e
 						.program_headers
 						.iter()
@@ -137,6 +141,7 @@ impl Binary {
 							}
 						})
 						.collect::<Vec<_>>();
+					println!("Number of executable sections = {}", sections.len());
 					Ok(sections)
 				}
 				Object::PE(p) => {
@@ -175,6 +180,13 @@ impl Binary {
 	}
 }
 
+impl Display for Binary {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		writeln!(f, "{:?}", self.path)?;
+		write!(f, "{:?}", self.arch)
+	}
+}
+
 pub struct Section<'b> {
 	file_offset: usize,
 	section_vaddr: usize,
@@ -202,5 +214,15 @@ impl Section<'_> {
 
 	pub fn bytes(&self) -> &[u8] {
 		self.bytes
+	}
+}
+
+impl Display for Section<'_> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		writeln!(f, "Offset: {}", self.file_offset)?;
+		writeln!(f, "VAddr: {}", self.section_vaddr)?;
+		writeln!(f, "Program Base: {}", self.program_base)?;
+		writeln!(f, "Size: {}", self.bytes.len())?;
+		write!(f, "Bitness: {:?}", self.bitness)
 	}
 }
