@@ -54,7 +54,6 @@ impl Binary {
 	}
 
 	pub fn sections(&self, raw: Option<bool>) -> Result<Vec<Section>> {
-		println!("Parsing sections...");
 		match raw {
 			Some(true) => Ok(vec![Section {
 				file_offset: 0,
@@ -118,13 +117,11 @@ impl Binary {
 			// Default behaviour - fall back to raw if able
 			None => match Object::parse(&self.bytes)? {
 				Object::Elf(e) => {
-					println!("Image is an ELF");
 					let bitness = if e.is_64 {
 						Bitness::Bits64
 					} else {
 						Bitness::Bits32
 					};
-					println!("Bitness = {:?}", bitness);
 					let sections = e
 						.program_headers
 						.iter()
@@ -141,7 +138,6 @@ impl Binary {
 							}
 						})
 						.collect::<Vec<_>>();
-					println!("Number of executable sections = {}", sections.len());
 					Ok(sections)
 				}
 				Object::PE(p) => {

@@ -91,21 +91,13 @@ fn write_gadgets<T: ROPInstruction>(mut w: impl Write, gadgets: &[(Gadget<T>, us
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	println!("");
 	let start = Instant::now();
 
 	let opts = Opt::parse();
 
 	let b = opts.binary;
 	let b = Binary::new(b)?;
-	println!("{}", &b);
-	println!("");
 	let sections = b.sections(opts.raw)?;
-	println!("");
-	for (i, s) in sections.iter().enumerate() {
-		println!("Section {}:", i + 1);
-		println!("{}", s);
-	}
 
 	// let disassemble = match b.arch() {
 	// 	Arch::RiscV => RVDisassembler::disassemble,

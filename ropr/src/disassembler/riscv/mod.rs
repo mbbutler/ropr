@@ -3,6 +3,7 @@
 use crate::binary::{Bitness, Section};
 
 use disc_v::{decode_inst_bytes, rv_isa};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use self::rv_instruction::RVInstruction;
 
@@ -13,7 +14,6 @@ pub struct RVDisassembler {}
 
 impl<'b> RVDisassembler {
 	pub fn disassemble(section: &'b Section) -> Option<Disassembly<'b, RVInstruction>> {
-		println!("Disassembling Section:");
 		let bytes = section.bytes();
 
 		if bytes.is_empty() {
@@ -25,13 +25,15 @@ impl<'b> RVDisassembler {
 			Bitness::Bits64 => rv_isa::rv64,
 		};
 
-		let mut instructions = Vec::with_capacity(bytes.len());
 		let start_pc = (section.program_base() + section.section_vaddr()) as u64;
-		for i in 0..bytes.len() {
-			let inst = bytes.get(i..)?;
-			let decoded = decode_inst_bytes(isa, start_pc + i as u64, inst).unwrap_or_default();
-			instructions.push(RVInstruction::new(decoded));
-		}
+		let instructions: Vec<RVInstruction> = (0..bytes.len())
+			.into_par_iter()
+			.map(|i| {
+				RVInstruction::new(
+					decode_inst_bytes(isa, start_pc + i as u64, &bytes[i..]).unwrap_or_default(),
+				)
+			})
+			.collect();
 
 		// let instructions: Vec<RVInstruction> = DVDisassembler::new(
 		// 	isa,
