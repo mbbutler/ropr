@@ -257,8 +257,4 @@ impl ROPInstruction for RVInstruction {
 	fn is_base_pivot_head(&self) -> bool {
 		self.modifies_reg(rv_ireg::s0 as u8)
 	}
-
-	// fn format(&self, output: &mut impl iced_x86::FormatterOutput) {
-	// 	output.write(&format_inst(40, &self.instr), FormatterTextKind::Text);
-	// }
 }

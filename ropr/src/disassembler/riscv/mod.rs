@@ -35,20 +35,6 @@ impl<'b> RVDisassembler {
 			})
 			.collect();
 
-		// let instructions: Vec<RVInstruction> = DVDisassembler::new(
-		// 	isa,
-		// 	bytes,
-		// 	(section.program_base() + section.section_vaddr()) as u64,
-		// )
-		// .map(RVInstruction::new)
-		// .collect();
-
-		// let mut file = File::create("rv_disassembly.txt").unwrap();
-		// for rv_instr in &instructions {
-		// 	file.write(format!("{:0>8x} {}\n", rv_instr.instr.pc, rv_instr).as_bytes())
-		// 		.unwrap();
-		// }
-
 		Some(Disassembly {
 			section,
 			bytes,
